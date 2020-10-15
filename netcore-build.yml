@@ -1,0 +1,78 @@
+# ASP.NET Core - Basic buid Pipeline
+# Reference:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+parameters:
+  - name: configuration
+    type: string
+    default: release
+
+  - name: AssemblyVersion
+    type: string
+    default: '1.0'
+
+  - name: dbContext
+    type: string
+    default: ''
+
+stages:
+- stage: StandardBuild
+
+  jobs:
+  - job: buildJob
+    displayName: Build .NET Core App
+    variables:
+      configuration: ${{ parameters.configuration }}
+      version.MajorMinor: ${{ parameters.AssemblyVersion }}
+      version.Build: $[counter(variables['version.MajorMinor'], 0)]
+      version.Full: '$(version.MajorMinor).$(version.Build)'
+
+    steps:
+
+    - script: echo "##vso[build.updatebuildnumber]build-$(version.Full)"
+      displayName: Set Build Number
+
+    - task: UseDotNet@2
+      displayName: Use .NET Core 3.1
+      inputs:
+        version: 3.1.x
+
+    - task: DotNetCoreCLI@2
+      displayName: Restore packages dependencies
+      inputs:
+        command: restore
+        projects: '**/*.csproj'
+
+    - task: DotNetCoreCLI@2
+      displayName: Build dotnet app
+      inputs:
+        command: build
+        projects: '**/*.csproj'
+        arguments: '--configuration $(configuration)'
+        versioningScheme: ByEnvVar
+        versionEnvVar: VERSION_FULL
+
+    - script: |
+        dotnet user-secrets set ConnectionStrings:default "DUMMY"
+        dotnet tool install --global dotnet-ef
+        dotnet ef migrations script --output $(Build.ArtifactStagingDirectory)/migrations.sql --context ${{ parameters.dbContext }} --idempotent --no-build
+      displayName: Generate EF migrations script
+      condition: and( succeeded(), ne('${{ parameters.dbContext }}', '') )
+
+    - task: DotNetCoreCLI@2
+      displayName: Publish app to staging
+      inputs:
+        command: publish
+        publishWebProjects: true
+        arguments: '--configuration $(configuration) --output $(Build.ArtifactStagingDirectory)'
+        zipAfterPublish: true
+
+    - task: CopyFiles@2
+      displayName: Copy deploy scripts to staging
+      inputs:
+        contents: 'deploy/**'
+        targetFolder: $(Build.ArtifactStagingDirectory)
+
+    - publish: $(Build.ArtifactStagingDirectory)
+      displayName: Publish artifact
+      artifact: drop

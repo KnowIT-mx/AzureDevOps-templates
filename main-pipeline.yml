@@ -1,0 +1,43 @@
+# Standard CI/CD Pipeline for netcore web services
+
+trigger:
+  - development
+  - master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+resources:
+  repositories:
+    - repository: templates
+      type: gihub
+      name: KnowIT-mx/AzureDevOps.templates
+      ref: refs/tags/v2
+
+variables:
+- template: variables-ws.yml@templates
+
+- name: project
+  value: $(System.TeamProject) # Requerido por el template para definir el/los Resource Groups de Azure
+- name: webApp
+  value: $(Build.Repository.Name)
+- name: baseVersion
+  value: '1.0'
+
+stages:
+- template: netcore-build.yml@templates ## Build Stage
+  parameters:
+    AssemblyVersion: $(baseVersion)
+    dbContext: ''
+
+- template: netcore-deploy-ws.yml@templates  ## Deploy to DEV
+  parameters:
+    AzureConnection:
+    TargetEnvironment: dev
+    WebApp: ${{ variables.webApp }}
+
+- template: netcore-deploy-ws.yml@templates ## Deploy to PROD
+  parameters:
+    AzureConnection:
+    TargetEnvironment: prod
+    WebApp: ${{ variables.webApp }}

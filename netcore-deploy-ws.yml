@@ -1,0 +1,91 @@
+parameters:
+  - name: AzureConnection
+    type: string
+
+  - name: WebApp
+    type: string
+
+  - name: TargetEnvironment
+    type: string
+    values:
+      - dev
+      - prod
+    default: dev
+
+stages:
+- stage: ${{ format('Deploy_{0}', upper(parameters.TargetEnvironment)) }}
+
+  variables:
+    netcore.version: 3.1
+    appSettings: '-TZ America/Mexico_City'
+
+    webApp: ${{ format('{0}-{1}', parameters.TargetEnvironment, parameters.WebApp) }}
+    Azure.Subscription: ${{ parameters.AzureConnection }}
+
+    ${{ if eq(parameters.TargetEnvironment, 'dev') }}:
+      prefix: 'dev-'
+    ${{ if eq(parameters.TargetEnvironment, 'prod') }}:
+      prefix: ''
+
+  jobs:
+  - deployment: deployJob
+    displayName: Provision and deploy to Azure AppService
+    environment: ${{ parameters.TargetEnvironment }}
+    pool:
+      vmImage: 'windows-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - checkout: templates
+            path: templates
+
+          - task: CopyFiles@2
+            displayName: Add repository custom scripts
+            inputs:
+              sourceFolder: $(Pipeline.Workspace)/drop
+              contents: 'deploy/**'
+              targetFolder: $(Pipeline.Workspace)/templates
+              overwrite: true
+
+          - pwsh: |
+              $fileExists = Test-Path "$(Pipeline.Workspace)/drop/migrations.sql" -Verbose
+              echo "##vso[task.setvariable variable=deploySQL]$fileExists"
+            displayName: Check if exist SQL migration script
+
+          - task: AzureKeyVault@1
+            inputs:
+              azureSubscription: ${{ parameters.AzureConnection }}
+              KeyVaultName: $(Azure.ResourceGroup)
+            condition: and( succeeded(), eq( variables['deploySQL'], true ))
+
+          - task: AzureCLI@2
+            displayName: Provisioning WebApp Service
+            inputs:
+              azureSubscription: ${{ parameters.AzureConnection }}
+              scriptType: pscore
+              scriptLocation: scriptPath
+              scriptPath: '$(Pipeline.Workspace)/templates/deploy/webapp.ps1'
+            env:
+              CONN_STRING: $(KeyVault.ConnectionString)
+
+          - task: AzureWebApp@1
+            displayName: Deploy WebApp
+            inputs:
+              azureSubscription: ${{ parameters.AzureConnection }}
+              appName: $(webApp)
+              appType: webAppLinux
+              runtimeStack: DOTNETCORE|$(netcore.Version)
+              appSettings: $(appSettings)
+              package: $(Pipeline.Workspace)/drop/*.zip
+
+          - task: SqlAzureDacpacDeployment@1
+            displayName: Deploy changes to database
+            inputs:
+              azureSubscription: ${{ parameters.AzureConnection }}
+              authenticationType: connectionString
+              connectionString: $(defaultConnectionString)
+              deployType: SqlTask
+              sqlFile: $(Pipeline.Workspace)/drop/migrations.sql
+            condition: and( succeeded(), eq( variables['deploySQL'], true ))

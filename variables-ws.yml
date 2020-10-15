@@ -1,0 +1,14 @@
+# Variables de uso comun para los templates
+
+variables:
+  targetEnv: dev
+  prefix: 'dev-'
+  ${{ if eq(variables['build.SourceBranchName'], 'master') }}:
+    targetEnv: prod
+    prefix: ''
+
+  Azure.Location: southcentralus
+  Azure.ResourceGroup: $(prefix)$(project)
+  AppServicePlan: $(prefix)$(project)-ASP
+  dbServer: $(prefix)$(project)-mssql
+  KeyVault.ConnectionString: '@Microsoft.KeyVault(VaultName=$(Azure.ResourceGroup);SecretName=defaultConnectionString)'
