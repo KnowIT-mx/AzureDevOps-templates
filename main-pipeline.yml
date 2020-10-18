@@ -10,9 +10,8 @@ pool:
 resources:
   repositories:
     - repository: templates
-      type: gihub
-      name: KnowIT-mx/AzureDevOps.templates
-      ref: refs/tags/v2
+      type: git
+      name: templates
 
 variables:
 - template: variables-ws.yml@templates
@@ -22,7 +21,7 @@ variables:
 - name: webApp
   value: $(Build.Repository.Name)
 - name: baseVersion
-  value: '1.0'
+  value: '0.0'
 
 stages:
 - template: netcore-build.yml@templates ## Build Stage

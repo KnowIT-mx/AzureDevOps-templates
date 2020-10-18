@@ -16,9 +16,6 @@ stages:
 - stage: ${{ format('Deploy_{0}', upper(parameters.TargetEnvironment)) }}
 
   variables:
-    netcore.version: 3.1
-    appSettings: '-TZ America/Mexico_City'
-
     webApp: ${{ format('{0}-{1}', parameters.TargetEnvironment, parameters.WebApp) }}
     Azure.Subscription: ${{ parameters.AzureConnection }}
 

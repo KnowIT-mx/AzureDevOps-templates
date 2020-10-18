@@ -1,11 +1,15 @@
 # Variables de uso comun para los templates
 
 variables:
-  targetEnv: dev
-  prefix: 'dev-'
   ${{ if eq(variables['build.SourceBranchName'], 'master') }}:
     targetEnv: prod
     prefix: ''
+  ${{ if ne(variables['build.SourceBranchName'], 'master') }}:
+    targetEnv: dev
+    prefix: 'dev-'
+
+  netcore.version: 3.1
+  appSettings: '-TZ America/Mexico_City'
 
   Azure.Location: southcentralus
   Azure.ResourceGroup: $(prefix)$(project)
