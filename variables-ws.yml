@@ -8,11 +8,15 @@ variables:
     targetEnv: dev
     prefix: 'dev-'
 
+  node.version: 10.x
   netcore.version: 3.1
-  appSettings: '-TZ America/Mexico_City'
+  netcore.appSettings: '-TZ America/Mexico_City'
+
+  project: ${{ variables['System.TeamProject'] }}
 
   Azure.Location: southcentralus
   Azure.ResourceGroup: $(prefix)$(project)
+  Azure.Storage.Account: $[ lower(variables['project']) ]
   AppServicePlan: $(prefix)$(project)-ASP
   dbServer: $(prefix)$(project)-mssql
   KeyVault.ConnectionString: '@Microsoft.KeyVault(VaultName=$(Azure.ResourceGroup);SecretName=defaultConnectionString)'

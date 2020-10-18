@@ -33,9 +33,9 @@ stages:
       displayName: Set Build Number
 
     - task: UseDotNet@2
-      displayName: Use .NET Core 3.1
+      displayName: Use .NET Core $(netcore.version)
       inputs:
-        version: 3.1.x
+        version: $(netcore.version)
 
     - task: DotNetCoreCLI@2
       displayName: Restore packages dependencies

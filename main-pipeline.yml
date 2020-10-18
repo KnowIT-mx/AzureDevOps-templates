@@ -16,8 +16,6 @@ resources:
 variables:
 - template: variables-ws.yml@templates
 
-- name: project
-  value: $(System.TeamProject) # Requerido por el template para definir el/los Resource Groups de Azure
 - name: webApp
   value: $(Build.Repository.Name)
 - name: baseVersion

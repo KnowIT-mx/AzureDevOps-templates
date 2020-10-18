@@ -1,0 +1,30 @@
+# Node.js with React
+# Build a Node.js project that uses React.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+
+trigger:
+- development
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: templates
+
+variables:
+- template: variables-ws.yml@templates
+
+- name: node.version
+  value: 10.x
+
+- name: REACT_APP_WEBAPI_URL
+  value: https://backend.url
+
+stages:
+- template: react-build.yml@templates ## Build Stage
+

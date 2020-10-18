@@ -1,0 +1,33 @@
+# Node.js with React
+# Build a Node.js project that uses React.
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+
+stages:
+- stage: StandardBuild
+
+  jobs:
+  - job: buildJob
+    displayName: Build React App
+
+    steps:
+    - task: NodeTool@0
+      displayName: Install Node.js v$(node.version)
+      inputs:
+        versionSpec: $(node.version)
+
+    - script: |
+        npm install
+        npm run build
+      displayName: Install dependencies and build
+
+    - task: CopyFiles@2
+      displayName: Copy files to staging
+      inputs:
+        contents: |
+          build/**
+          deploy/**
+        targetFolder: $(Build.ArtifactStagingDirectory)
+
+    - publish: $(Build.ArtifactStagingDirectory)
+      displayName: Publish artifact
+      artifact: 'www'
