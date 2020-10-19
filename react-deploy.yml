@@ -1,0 +1,67 @@
+parameters:
+  - name: AzureConnection
+    type: string
+
+  - name: TargetEnvironment
+    type: string
+    values:
+      - dev
+      - prod
+    default: dev
+
+  - name: purgeCDN
+    type: boolean
+    default: false
+
+stages:
+- stage: Deploy
+
+  variables:
+    targetEnv: ${{ parameters.TargetEnvironment }}
+    purgeCDN: ${{ parameters.purgeCDN }}
+
+  jobs:
+  - deployment: deployJob
+    displayName: Provision and deploy to BLOB storage
+    environment: ${{ format('{0}-{1}', variables['Build.Repository.Name'], parameters.TargetEnvironment) }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - checkout: templates
+            path: templates
+
+          - task: CopyFiles@2
+            displayName: Add repository custom scripts
+            inputs:
+              sourceFolder: $(Pipeline.Workspace)/drop
+              contents: 'deploy/**'
+              targetFolder: $(Pipeline.Workspace)/templates
+              overwrite: true
+
+          - task: AzureCLI@2
+            displayName: Provisioning Azure Resources
+            inputs:
+              azureSubscription: ${{ parameters.AzureConnection }}
+              scriptType: pscore
+              scriptLocation: scriptPath
+              scriptPath: '$(Pipeline.Workspace)/templates/deploy/static-website.ps1'
+            condition: eq(variables['targetEnv'], 'dev')
+
+          - task: AzureCLI@2
+            displayName: Copy website files to storage
+            inputs:
+              azureSubscription: ${{ parameters.AzureConnection }}
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: $null = az storage blob upload-batch --source $(Pipeline.Workspace)/drop/build/ --destination '$web' --auth-mode key
+
+          - task: AzureCLI@2
+            displayName: Purge CDN cache (Only in Production)
+            inputs:
+              azureSubscription: ${{ parameters.AzureConnection }}
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: az cdn endpoint purge -n $(Azure.Storage.Account) --profile-name $(Azure.Storage.Account)-cdn --content-paths '/*'
+            condition: and( variables['purgeCDN'], eq(variables['targetEnv'], 'prod') )

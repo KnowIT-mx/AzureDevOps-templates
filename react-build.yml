@@ -30,4 +30,4 @@ stages:
 
     - publish: $(Build.ArtifactStagingDirectory)
       displayName: Publish artifact
-      artifact: 'www'
+      artifact: drop

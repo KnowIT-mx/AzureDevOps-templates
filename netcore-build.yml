@@ -35,7 +35,7 @@ stages:
     - task: UseDotNet@2
       displayName: Use .NET Core $(netcore.version)
       inputs:
-        version: $(netcore.version)
+        version: '$(netcore.version).x'
 
     - task: DotNetCoreCLI@2
       displayName: Restore packages dependencies

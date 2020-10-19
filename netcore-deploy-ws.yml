@@ -27,7 +27,7 @@ stages:
   jobs:
   - deployment: deployJob
     displayName: Provision and deploy to Azure AppService
-    environment: ${{ parameters.TargetEnvironment }}
+    environment: ${{ format('{0}-{1}', variables['Build.Repository.Name'], parameters.TargetEnvironment) }}
     pool:
       vmImage: 'windows-latest'
     strategy:
@@ -65,7 +65,7 @@ stages:
               scriptLocation: scriptPath
               scriptPath: '$(Pipeline.Workspace)/templates/deploy/webapp.ps1'
             env:
-              CONN_STRING: $(KeyVault.ConnectionString)
+              CONN_STRING: $(netcore.connectionString)
 
           - task: AzureWebApp@1
             displayName: Deploy WebApp
@@ -73,8 +73,8 @@ stages:
               azureSubscription: ${{ parameters.AzureConnection }}
               appName: $(webApp)
               appType: webAppLinux
-              runtimeStack: DOTNETCORE|$(netcore.Version)
-              appSettings: $(appSettings)
+              runtimeStack: DOTNETCORE|$(netcore.version)
+              appSettings: $(netcore.appSettings)
               package: $(Pipeline.Workspace)/drop/*.zip
 
           - task: SqlAzureDacpacDeployment@1
