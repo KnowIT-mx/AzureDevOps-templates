@@ -23,7 +23,7 @@ stages:
   jobs:
   - deployment: deployJob
     displayName: Provision and deploy to BLOB storage
-    environment: ${{ format('{0}-{1}', variables['Build.Repository.Name'], parameters.TargetEnvironment) }}
+    environment: ${{ format('{0}-{1}', 'frontend', parameters.TargetEnvironment) }}
     strategy:
       runOnce:
         deploy:
@@ -64,4 +64,4 @@ stages:
               scriptType: pscore
               scriptLocation: inlineScript
               inlineScript: az cdn endpoint purge -n $(Azure.Storage.Account) --profile-name $(Azure.Storage.Account)-cdn --content-paths '/*'
-            condition: and( variables['purgeCDN'], eq(variables['targetEnv'], 'prod') )
+            condition: and( eq(variables['purgeCDN'], 'true'), eq(variables['targetEnv'], 'prod') )

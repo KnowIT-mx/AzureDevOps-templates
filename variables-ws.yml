@@ -10,6 +10,7 @@ variables:
 
   node.version: 10.x
   netcore.version: 3.1
+  netcore.runProject: $(Build.Repository.Name)
   netcore.appSettings: '-TZ America/Mexico_City'
   netcore.connectionString: '@Microsoft.KeyVault(VaultName=$(Azure.ResourceGroup);SecretName=defaultConnectionString)'
 

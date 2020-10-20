@@ -53,9 +53,11 @@ stages:
         versionEnvVar: VERSION_FULL
 
     - script: |
+        echo "runProject = $(netcore.runProject)"
         dotnet user-secrets set ConnectionStrings:default "DUMMY"
         dotnet tool install --global dotnet-ef
-        dotnet ef migrations script --output $(Build.ArtifactStagingDirectory)/migrations.sql --context ${{ parameters.dbContext }} --idempotent --no-build
+        dotnet ef migrations script --output $(Build.ArtifactStagingDirectory)/migrations.sql \
+          --context ${{ parameters.dbContext }} --idempotent --no-build --project $(netcore.runProject)
       displayName: Generate EF migrations script
       condition: and( succeeded(), ne('${{ parameters.dbContext }}', '') )
 
