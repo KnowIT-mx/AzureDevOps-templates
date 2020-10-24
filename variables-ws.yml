@@ -19,5 +19,6 @@ variables:
   Azure.Location: southcentralus
   Azure.ResourceGroup: $(prefix)$(project)
   Azure.Storage.Account: $[ lower(variables['project']) ]
-  AppServicePlan: $(prefix)$(project)-ASP
+  AppService.Name: $(prefix)$(project)-ASP
+  AppService.Tier: B1
   dbServer: $(prefix)$(project)-mssql

@@ -12,12 +12,16 @@ parameters:
       - prod
     default: dev
 
+  - name: SlotName
+    type: string
+
 stages:
 - stage: ${{ format('Deploy_{0}', upper(parameters.TargetEnvironment)) }}
 
   variables:
-    webApp: ${{ format('{0}-{1}', parameters.WebApp, parameters.TargetEnvironment) }}
     Azure.Subscription: ${{ parameters.AzureConnection }}
+    webApp: ${{ format('{0}-{1}', parameters.WebApp, parameters.TargetEnvironment) }}
+    webApp.slot: ${{ parameters.SlotName }}
 
     ${{ if eq(parameters.TargetEnvironment, 'dev') }}:
       prefix: 'dev-'
@@ -73,6 +77,9 @@ stages:
               azureSubscription: ${{ parameters.AzureConnection }}
               appName: $(webApp)
               appType: webAppLinux
+              ${{ if parameters.SlotName }}:
+                deployToSlotOrASE: true
+                slotName: ${{ parameters.SlotName }}
               runtimeStack: DOTNETCORE|$(netcore.version)
               appSettings: $(netcore.appSettings)
               package: $(Pipeline.Workspace)/drop/*.zip
