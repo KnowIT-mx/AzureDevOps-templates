@@ -1,33 +1,53 @@
 parameters:
-  - name: AzureConnection
+  - name: webApp
     type: string
 
-  - name: WebApp
+  - name: projectName
     type: string
 
-  - name: TargetEnvironment
+  - name: runtime
+    type: string
+    default: 'DOTNET|5.0'
+
+  - name: appSettings
+    type: string
+    default: ''
+
+  - name: appServicePlan
+    type: string
+    default: ''
+
+  - name: targetEnvironment
     type: string
     values:
       - dev
       - prod
+      - qa
     default: dev
 
+  - name: azureLocation
+    type: string
+
+  - name: azureConnection
+    type: string
+
 stages:
-- stage: ${{ format('Deploy_{0}', upper(parameters.TargetEnvironment)) }}
+- stage: ${{ format('Deploy_{0}_{1}', parameters.projectName, parameters.targetEnvironment) }}
 
   variables:
-    webApp: ${{ format('{0}-{1}', parameters.WebApp, parameters.TargetEnvironment) }}
-    Azure.Subscription: ${{ parameters.AzureConnection }}
-
-    ${{ if eq(parameters.TargetEnvironment, 'dev') }}:
-      prefix: 'dev-'
-    ${{ if eq(parameters.TargetEnvironment, 'prod') }}:
+    prefix: ${{ format('{0}-', parameters.targetEnvironment) }}
+    ${{ if eq(parameters.targetEnvironment, 'prod') }}:
       prefix: ''
+
+    WebApp.ServicePlan: ${{ coalesce(parameters.appServicePlan, format('ASP-{0}-{1}', parameters.projectName, parameters.targetEnvironment)) }}
+    WebApp.Name: ${{ format('{0}{1}', variables.prefix, parameters.webApp) }}
+    Azure.Location: ${{ parameters.azureLocation }}
+    Azure.ResourceGroup: ${{ format('{0}{1}', variables.prefix, parameters.projectName) }}
 
   jobs:
   - deployment: deployJob
     displayName: Provision and deploy to Azure AppService
-    environment: ${{ format('{0}-{1}', parameters.WebApp, parameters.TargetEnvironment) }}
+    environment: ${{ format('{0}-{1}', parameters.webApp, parameters.targetEnvironment) }}
     pool:
       vmImage: 'windows-latest'
     strategy:
@@ -48,41 +68,42 @@ stages:
 
           - pwsh: |
               ($fileExists = Test-Path "$(Pipeline.Workspace)/drop/migrations.sql")
-              echo "##vso[task.setvariable variable=deploySQL]$fileExists"
+              echo "##vso[task.setvariable variable=DeploySQL]$fileExists"
             displayName: Check if exist SQL migration script
 
           - task: AzureKeyVault@1
             inputs:
-              azureSubscription: ${{ parameters.AzureConnection }}
-              KeyVaultName: $(Azure.ResourceGroup)
-            condition: and( succeeded(), eq( variables['deploySQL'], true ))
+              azureSubscription: ${{ parameters.azureConnection }}
+              keyVaultName: ${{ parameters.projectName }}
+            condition: and( succeeded(), eq( variables['DeploySQL'], true ))
 
           - task: AzureCLI@2
             displayName: Provisioning WebApp Service
             inputs:
-              azureSubscription: ${{ parameters.AzureConnection }}
+              azureSubscription: ${{ parameters.azureConnection }}
               scriptType: pscore
               scriptLocation: scriptPath
               scriptPath: '$(Pipeline.Workspace)/templates/deploy/webapp.ps1'
             env:
-              CONN_STRING: $(netcore.connectionString)
+              RUNTIME: ${{ parameters.runtime }}
+              #CONN_STRING: $(netcore.connectionString)
 
           - task: AzureWebApp@1
             displayName: Deploy WebApp
             inputs:
-              azureSubscription: ${{ parameters.AzureConnection }}
-              appName: $(webApp)
+              azureSubscription: ${{ parameters.azureConnection }}
+              appName: $(WebApp.Name)
               appType: webAppLinux
-              runtimeStack: DOTNETCORE|$(netcore.version)
-              appSettings: $(netcore.appSettings)
+              ##runtimeStack: ${{ parameters.runtime }}
+              appSettings: ${{ parameters.appSettings }}
               package: $(Pipeline.Workspace)/drop/*.zip
 
           - task: SqlAzureDacpacDeployment@1
             displayName: Commit changes to database
             inputs:
-              azureSubscription: ${{ parameters.AzureConnection }}
+              azureSubscription: ${{ parameters.azureConnection }}
               authenticationType: connectionString
               connectionString: $(defaultConnectionString)
               deployType: SqlTask
               sqlFile: $(Pipeline.Workspace)/drop/migrations.sql
-            condition: and( succeeded(), eq( variables['deploySQL'], true ))
+            condition: and( succeeded(), eq( variables['DeploySQL'], true ))

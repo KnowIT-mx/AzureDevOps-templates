@@ -2,10 +2,10 @@
 az group create --name $env:AZURE_RESOURCEGROUP --location $env:AZURE_LOCATION
 az configure --defaults group=$env:AZURE_RESOURCEGROUP
 
-"[command][+] Application Service Plan [$env:APPSERVICEPLAN]..."
-az appservice plan create --name $env:APPSERVICEPLAN --is-linux --sku B1
+"[command][+] Application Service Plan [$env:WEBAPP_SERVICEPLAN]..."
+az appservice plan create --name $env:WEBAPP_SERVICEPLAN --is-linux --sku B1
 
-"[command][+] WebApp [$env:WEBAPP]..."
-az webapp create --name $env:WEBAPP --plan $env:APPSERVICEPLAN --runtime """DOTNETCORE|$env:NETCORE_VERSION"""
-az webapp identity assign --name $env:WEBAPP --resource-group $env:AZURE_RESOURCEGROUP
-az webapp config connection-string set --name $env:WEBAPP --connection-string-type SQLAzure --settings default="""$env:CONN_STRING"""
+"[command][+] WebApp [$env:WEBAPP_NAME]..."
+az webapp create --name $env:WEBAPP_NAME --plan $env:WEBAPP_SERVICEPLAN --runtime """$env:RUNTIME"""
+az webapp identity assign --name $env:WEBAPP_NAME --resource-group $env:AZURE_RESOURCEGROUP
+#az webapp config connection-string set --name $env:WEBAPP_NAME --connection-string-type SQLAzure --settings default="""$env:CONN_STRING"""
