@@ -1,0 +1,72 @@
+parameters:
+  - name: databaseName
+    type: string
+
+  - name: databaseServer
+    type: string
+
+  - name: connectionName
+    type: string
+
+  - name: projectName
+    type: string
+
+  - name: azureConnection
+    type: string
+
+stages:
+- stage: ${{ format('DeployDB_{0}', upper(parameters.targetEnvironment)) }}
+  pool:
+    vmImage: 'windows-latest' # Requerido por la tarea 'SqlAzureDacpacDeployment@1'
+
+  jobs:
+  - job: deployDatabaseJob
+    displayName: Provision and deploy changes to database using .Net Entity Framework
+
+    steps:
+
+    - download: current
+    - checkout: templates
+      path: templates
+
+    - task: CopyFiles@2
+      displayName: Add repository custom scripts
+      inputs:
+        sourceFolder: $(Pipeline.Workspace)/drop
+        contents: 'deploy/**'
+        targetFolder: $(Pipeline.Workspace)/templates
+        overwrite: true
+
+    - task: AzureCLI@2
+      displayName: Provision AzureSQL Database
+      inputs:
+        azureSubscription: ${{ parameters.azureConnection }}
+        scriptType: pscore
+        scriptLocation: scriptPath
+        scriptPath: '$(Pipeline.Workspace)/templates/deploy/database.ps1'
+      env:
+        AZURE_RESOURCEGROUP: ${{ parameters.projectName }}
+        DBSERVER: ${{ parameters.databaseServer }}
+        DBNAME: ${{ parameters.databaseName}}
+
+    - pwsh: |
+        ($fileExists = Test-Path "$(Pipeline.Workspace)/drop/migrations.sql")
+        echo "##vso[task.setvariable variable=MigrateDB]$fileExists"
+      displayName: Check if exist SQL migration script
+
+    - task: AzureKeyVault@1
+      inputs:
+        azureSubscription: ${{ parameters.azureConnection }}
+        keyVaultName: ${{ parameters.projectName }}
+        secretsFilter: ${{ parameters.connectionName }}
+      condition: and( succeeded(), eq( variables['MigrateDB'], true ))
+
+    - task: SqlAzureDacpacDeployment@1
+      displayName: Commit changes to database
+      inputs:
+        azureSubscription: ${{ parameters.azureConnection }}
+        authenticationType: connectionString  # Valor obtenido de Azure KeyVault en paso previo
+        connectionString: ${{ format('$({0})', parameters.connectionName) }}
+        deployType: SqlTask
+        sqlFile: $(Pipeline.Workspace)/drop/migrations.sql
+      condition: and( succeeded(), eq( variables['MigrateDB'], true ))
