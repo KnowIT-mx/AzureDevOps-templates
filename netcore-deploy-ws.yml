@@ -42,7 +42,7 @@ stages:
 
     WebApp.ServicePlan: ${{ coalesce(parameters.appServicePlan, format('ASP-{0}-{1}', parameters.projectName, parameters.targetEnvironment)) }}
     WebApp.Name: ${{ format('{0}{1}', variables.prefix, parameters.webApp) }}
-    WebApp.Runtime: ${{ coalesce(parameters.runtime, format('DOTNET|{0}', variables['Global.dotnetVersion'])) }}
+    WebApp.Runtime: ${{ coalesce(parameters.runtime, 'DOTNET|$(Global.dotnetVersion)') }}
     Azure.Location: ${{ parameters.azureLocation }}
     Azure.ResourceGroup: ${{ format('{0}{1}', variables.prefix, parameters.projectName) }}
 
