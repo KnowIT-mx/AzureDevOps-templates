@@ -1,6 +1,11 @@
-# ASP.NET Core - Basic buid Pipeline
-# Reference:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+# ASP.NET Core - Basic Build Pipeline
+
+# References:
+# - https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+#
+# - Versioning .NET Core Assemblies in Azure DevOps isn’t Straightforward
+#   https://pleasereleaseme.net/versioning-net-core-assemblies-in-azure-devops-isnt-straightforward-and-probably-wont-be-in-other-ci-cd-tools-either/
+
 
 parameters:
   - name: configuration
@@ -24,13 +29,21 @@ stages:
     variables:
       configuration: ${{ parameters.configuration }}
       version.MajorMinor: ${{ parameters.AssemblyVersion }}
-      version.Build: $[counter(variables['version.MajorMinor'], 0)]
+      version.Base: $[variables['version.MajorMinor']]
+      version.Build: $[counter(variables['version.MajorMinor'], 1)]
       version.Full: '$(version.MajorMinor).$(version.Build)'
 
     steps:
 
     - script: echo "##vso[build.updatebuildnumber]build-$(version.Full)"
       displayName: Set Build Number
+
+    - task: UseDotNet@2
+      displayName: Define .NET SDK Version
+      inputs:
+        packageType: sdk
+        version: '$(Global.dotnetVersion).x'
+      condition: and(succeeded(), ne(variables['Global.dotnetVersion'], ''))
 
     - task: DotNetCoreCLI@2
       displayName: Restore packages dependencies
@@ -43,16 +56,13 @@ stages:
       inputs:
         command: build
         projects: '**/*.csproj'
-        arguments: '--configuration $(configuration)'
-        versioningScheme: ByEnvVar
-        versionEnvVar: VERSION_FULL
+        arguments: '--configuration $(configuration) --no-restore /p:Version=$(version.Full)'
 
     - script: |
-        echo "runProject = $(netcore.runProject)"
         dotnet user-secrets set ConnectionStrings:default "DUMMY"
         dotnet tool install --global dotnet-ef
         dotnet ef migrations script --output $(Build.ArtifactStagingDirectory)/migrations.sql \
-          --context ${{ parameters.dbContext }} --idempotent --no-build --project $(netcore.runProject)
+          --context ${{ parameters.dbContext }} --idempotent --no-build
       displayName: Generate EF migrations script
       condition: and( succeeded(), ne('${{ parameters.dbContext }}', '') )
 
@@ -61,7 +71,7 @@ stages:
       inputs:
         command: publish
         publishWebProjects: true
-        arguments: '--configuration $(configuration) --output $(Build.ArtifactStagingDirectory)'
+        arguments: '--configuration $(configuration) --no-build --output $(Build.ArtifactStagingDirectory)'
         zipAfterPublish: true
 
     - task: CopyFiles@2
