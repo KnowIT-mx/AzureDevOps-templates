@@ -8,6 +8,7 @@ parameters:
 
   - name: runtime
     type: string
+    default: ''
 
   - name: appSettings
     type: string
