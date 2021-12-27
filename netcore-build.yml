@@ -20,6 +20,10 @@ parameters:
     type: string
     default: ''
 
+  - name: projects
+    type: string
+    default: '**/*.csproj'
+
 stages:
 - stage: StandardBuild
 
@@ -49,13 +53,13 @@ stages:
       displayName: Restore packages dependencies
       inputs:
         command: restore
-        projects: '**/*.csproj'
+        projects: ${{ parameters.projects }}
 
     - task: DotNetCoreCLI@2
       displayName: Build dotnet app
       inputs:
         command: build
-        projects: '**/*.csproj'
+        projects: ${{ parameters.projects }}
         arguments: '--configuration $(configuration) --no-restore /p:Version=$(version.Full)'
 
     - script: |
