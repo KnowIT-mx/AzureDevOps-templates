@@ -36,9 +36,10 @@ stages:
 - stage: ${{ format('DeployWebApp_{0}', upper(parameters.targetEnvironment)) }}
 
   variables:
-    prefix: ${{ format('{0}-', parameters.targetEnvironment) }}
     ${{ if eq(parameters.targetEnvironment, 'prod') }}:
       prefix: ''
+    ${{ if ne(parameters.targetEnvironment, 'prod') }}:
+      prefix: ${{ format('{0}-', parameters.targetEnvironment) }}
 
     WebApp.ServicePlan: ${{ coalesce(parameters.appServicePlan, format('ASP-{0}-{1}', parameters.projectName, parameters.targetEnvironment)) }}
     WebApp.Name: ${{ format('{0}{1}', variables.prefix, parameters.webApp) }}
