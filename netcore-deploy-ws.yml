@@ -49,7 +49,7 @@ stages:
   jobs:
   - deployment: deployWebAppJob
     displayName: Provision and deploy to Azure AppService
-    environment: ${{ format('{0}-{1}', parameters.webApp, parameters.targetEnvironment) }}
+    environment: ${{ format('{0}-{1}', parameters.projectName, parameters.targetEnvironment) }}
 
     strategy:
       runOnce:

@@ -12,7 +12,7 @@ parameters:
     type: string
     default: release
 
-  - name: AssemblyVersion
+  - name: assemblyVersion
     type: string
     default: '1.0'
 
