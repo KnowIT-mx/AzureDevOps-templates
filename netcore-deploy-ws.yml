@@ -32,6 +32,10 @@ parameters:
   - name: azureConnection
     type: string
 
+  - name: provision
+    type: boolean
+    default: false 
+
 stages:
 - stage: ${{ format('DeployWebApp_{0}', upper(parameters.targetEnvironment)) }}
 
@@ -80,6 +84,7 @@ stages:
               scriptType: pscore
               scriptLocation: scriptPath
               scriptPath: '$(Pipeline.Workspace)/templates/deploy/webapp.ps1'
+            condition: and( succeeded(), eq(${{ parameters.provision }}, true) )
 
           - task: AzureWebApp@1
             displayName: Deploy WebApp
