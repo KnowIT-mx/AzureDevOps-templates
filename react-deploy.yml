@@ -37,9 +37,10 @@ stages:
     ${{ if ne(parameters.targetEnvironment, 'prod') }}:
       prefix: ${{ parameters.targetEnvironment }}
 
+    storageName: ${{ lower(replace(parameters.siteName, '-', '')) }}
     Azure.Location: ${{ parameters.azureLocation }}
     Azure.ResourceGroup: ${{ format('{0}-{1}', variables.prefix, parameters.projectName) }}
-    Azure.Storage.Account: ${{ lower(replace(format('{0}{1}', variables.prefix, parameters.siteName), '-', '')) }}
+    Azure.Storage.Account: ${{ format('{0}{1}', variables.prefix, variables.storageName) }}
 
   jobs:
   - deployment: deployStatisSiteJob
