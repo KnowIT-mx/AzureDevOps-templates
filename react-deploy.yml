@@ -39,7 +39,7 @@ stages:
 
     Azure.Location: ${{ parameters.azureLocation }}
     Azure.ResourceGroup: ${{ format('{0}-{1}', variables.prefix, parameters.projectName) }}
-    Azure.Storage.Account: ${{ format('{0}{1}', variables.prefix, lower(replace(parameters.siteName,'-',''))) }}
+    Azure.Storage.Account: ${{ lower(replace(format('{0}{1}', variables.prefix, parameters.siteName), '-', '')) }}
 
   jobs:
   - deployment: deployStatisSiteJob
