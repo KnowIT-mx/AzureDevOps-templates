@@ -22,7 +22,6 @@ stages:
         versionSpec: $(node.version)
 
     - script: |
-        env
         npm install
         npm run build
       displayName: Install dependencies and build
