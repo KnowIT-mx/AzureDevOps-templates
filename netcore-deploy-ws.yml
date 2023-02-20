@@ -34,7 +34,7 @@ parameters:
 
   - name: provision
     type: boolean
-    default: false 
+    default: false
 
 stages:
 - stage: ${{ format('DeployWebApp_{0}', upper(parameters.targetEnvironment)) }}
@@ -47,7 +47,7 @@ stages:
 
     WebApp.ServicePlan: ${{ coalesce(parameters.appServicePlan, format('ASP-{0}-{1}', parameters.projectName, parameters.targetEnvironment)) }}
     WebApp.Name: ${{ format('{0}{1}', variables.prefix, parameters.webApp) }}
-    WebApp.Runtime: ${{ coalesce(parameters.runtime, 'DOTNET|$(Global.dotnetVersion)') }}
+    WebApp.Runtime: ${{ coalesce(parameters.runtime, 'DOTNETCORE:$(Global.dotnetVersion)') }}
     Azure.Location: ${{ parameters.azureLocation }}
     Azure.ResourceGroup: ${{ format('{0}{1}', variables.prefix, parameters.projectName) }}
 
