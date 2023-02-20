@@ -12,12 +12,14 @@ stages:
   jobs:
   - job: buildJob
     displayName: Build React App
+    variables:
+      node.version: ${{ parameters.nodeVersion }}
 
     steps:
     - task: NodeTool@0
       displayName: Install Node.js v$(node.version)
       inputs:
-        versionSpec: $(nodeVersion)
+        versionSpec: $(node.version)
 
     - script: |
         env
