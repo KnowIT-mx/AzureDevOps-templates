@@ -1,29 +1,50 @@
 parameters:
-  - name: AzureConnection
+  - name: siteName
     type: string
 
-  - name: TargetEnvironment
+  - name: projectName
+    type: string
+    default: '$(System.TeamProject)'
+
+  - name: azureLocation
+    type: string
+
+  - name: azureConnection
+    type: string
+
+  - name: targetEnvironment
     type: string
     values:
       - dev
       - prod
+      - qa
     default: dev
 
   - name: purgeCDN
     type: boolean
     default: false
 
+  - name: provision
+    type: boolean
+    default: false
+
 stages:
-- stage: Deploy
+- stage:  ${{ format('DeploySaticSite_{0}', upper(parameters.targetEnvironment)) }}
 
   variables:
-    targetEnv: ${{ parameters.TargetEnvironment }}
-    purgeCDN: ${{ parameters.purgeCDN }}
+    ${{ if eq(parameters.targetEnvironment, 'prod') }}:
+      prefix: ''
+    ${{ if ne(parameters.targetEnvironment, 'prod') }}:
+      prefix: ${{ parameters.targetEnvironment }}
+
+    Azure.Location: ${{ parameters.azureLocation }}
+    Azure.ResourceGroup: ${{ format('{0}-{1}', variables.prefix, parameters.projectName) }}
+    Azure.Storage.Account: ${{ format('{0}{1}', variables.prefix, replace(parameters.siteName,'-','')) }}
 
   jobs:
-  - deployment: deployJob
+  - deployment: deployStatisSiteJob
     displayName: Provision and deploy to BLOB storage
-    environment: ${{ format('{0}-{1}', 'frontend', parameters.TargetEnvironment) }}
+    environment: ${{ format('{0}-{1}', 'frontend', parameters.targetEnvironment) }}
     strategy:
       runOnce:
         deploy:
@@ -31,6 +52,10 @@ stages:
 
           - checkout: templates
             path: templates
+
+          - pwsh: |
+              dir env:AZURE*
+            displayName: Show deploy parameters
 
           - task: CopyFiles@2
             displayName: Add repository custom scripts
@@ -43,25 +68,25 @@ stages:
           - task: AzureCLI@2
             displayName: Provisioning Azure Resources
             inputs:
-              azureSubscription: ${{ parameters.AzureConnection }}
+              azureSubscription: ${{ parameters.azureConnection }}
               scriptType: pscore
               scriptLocation: scriptPath
               scriptPath: '$(Pipeline.Workspace)/templates/deploy/static-website.ps1'
-            condition: eq(variables['targetEnv'], 'dev')
+            condition: and( succeeded(), eq(${{ parameters.provision }}, true) )
 
           - task: AzureCLI@2
             displayName: Copy website files to storage
             inputs:
-              azureSubscription: ${{ parameters.AzureConnection }}
+              azureSubscription: ${{ parameters.azureConnection }}
               scriptType: pscore
               scriptLocation: inlineScript
-              inlineScript: $null = az storage blob upload-batch --source $(Pipeline.Workspace)/drop/build/ --destination '$web' --auth-mode key
+              inlineScript: az storage blob upload-batch --source $(Pipeline.Workspace)/drop/build/ --destination '$web' --auth-mode key
 
           - task: AzureCLI@2
-            displayName: Purge CDN cache (Only in Production)
+            displayName: Purge CDN cache
             inputs:
-              azureSubscription: ${{ parameters.AzureConnection }}
+              azureSubscription: ${{ parameters.azureConnection }}
               scriptType: pscore
               scriptLocation: inlineScript
               inlineScript: az cdn endpoint purge -n $(Azure.Storage.Account) --profile-name $(Azure.Storage.Account)-cdn --content-paths '/*'
-            condition: and( eq(variables['purgeCDN'], 'true'), eq(variables['targetEnv'], 'prod') )
+            condition: and( succeeded(), eq(${{ parameters.purgeCDN }}, true) )

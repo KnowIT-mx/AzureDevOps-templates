@@ -2,6 +2,10 @@
 # Build a Node.js project that uses React.
 # https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
 
+parameters:
+  - name: nodeVersion
+    type: string
+
 stages:
 - stage: StandardBuild
 
@@ -13,7 +17,7 @@ stages:
     - task: NodeTool@0
       displayName: Install Node.js v$(node.version)
       inputs:
-        versionSpec: $(node.version)
+        versionSpec: $(nodeVersion)
 
     - script: |
         env
