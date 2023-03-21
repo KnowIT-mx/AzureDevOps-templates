@@ -1,0 +1,95 @@
+
+parameters:
+  - name: functionApp
+    type: string
+
+  - name: projectName
+    type: string
+    default: '$(System.TeamProject)'
+
+  - name: runtime
+    type: string
+    default: ''
+
+  - name: appSettings
+    type: string
+    default: ''
+
+  - name: appServicePlan
+    type: string
+    default: ''
+
+  - name: targetEnvironment
+    type: string
+    values:
+      - dev
+      - prod
+      - qa
+    default: dev
+
+  - name: azureConnection
+    type: string
+
+  - name: provision
+    type: boolean
+    default: false
+
+stages:
+- stage: ${{ format('DeployFunctionApp_{0}', upper(parameters.targetEnvironment)) }}
+
+  variables:
+    ${{ if eq(parameters.targetEnvironment, 'prod') }}:
+      prefix: ''
+    ${{ if ne(parameters.targetEnvironment, 'prod') }}:
+      prefix: ${{ format('{0}-', parameters.targetEnvironment) }}
+
+    #FunctionApp.ServicePlan: ${{ coalesce(parameters.appServicePlan, format('ASP-{0}-{1}', parameters.projectName, parameters.targetEnvironment)) }}
+    FunctionApp.Name: ${{ format('{0}{1}', variables.prefix, parameters.functionApp) }}
+    #FunctionApp.Runtime: ${{ coalesce(parameters.runtime, 'DOTNETCORE:$(Global.dotnetVersion)') }} # SOLO EN LINUX
+    #Azure.Location: ${{ parameters.azureLocation }}
+    Azure.ResourceGroup: ${{ format('{0}{1}', variables.prefix, parameters.projectName) }}
+
+  jobs:
+  - deployment: deployWebAppJob
+    displayName: Deploy to Azure FunctionApp
+    environment: ${{ format('{0}-{1}', parameters.projectName, parameters.targetEnvironment) }}
+
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - checkout: templates
+            path: templates
+
+          - pwsh: |
+              dir env:FUNCTIONAPP*
+              dir env:AZURE*
+            displayName: Show deploy parameters
+
+          # - task: CopyFiles@2
+          #   displayName: Add repository custom scripts
+          #   inputs:
+          #     sourceFolder: $(Pipeline.Workspace)/drop
+          #     contents: 'deploy/**'
+          #     targetFolder: $(Pipeline.Workspace)/templates
+          #     overwrite: true
+
+          # - task: AzureCLI@2
+          #   displayName: Provisioning WebApp Service
+          #   inputs:
+          #     azureSubscription: ${{ parameters.azureConnection }}
+          #     scriptType: pscore
+          #     scriptLocation: scriptPath
+          #     scriptPath: '$(Pipeline.Workspace)/templates/deploy/webapp.ps1'
+          #   condition: and( succeeded(), eq(${{ parameters.provision }}, true) )
+
+          - task: AzureFunctionApp@1
+            displayName: Deploy WebApp
+            inputs:
+              azureSubscription: ${{ parameters.azureConnection }}
+              appType: functionApp
+              appName: $(FunctionApp.Name)
+              package: $(Pipeline.Workspace)/drop/*.zip
+              deploymentMethod: auto
+              appSettings: ${{ parameters.appSettings }}
