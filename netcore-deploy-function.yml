@@ -85,7 +85,7 @@ stages:
           #   condition: and( succeeded(), eq(${{ parameters.provision }}, true) )
 
           - task: AzureFunctionApp@1
-            displayName: Deploy WebApp
+            displayName: Deploy FunctionApp
             inputs:
               azureSubscription: ${{ parameters.azureConnection }}
               appType: functionApp
