@@ -81,7 +81,7 @@ stages:
               azureSubscription: ${{ parameters.azureConnection }}
               scriptType: pscore
               scriptLocation: inlineScript
-              inlineScript: az storage blob upload-batch --source $(Pipeline.Workspace)/drop/build/ --destination '$web' --auth-mode key
+              inlineScript: az storage blob upload-batch --source $(Pipeline.Workspace)/drop/build/ --destination '$web' --auth-mode login
 
           - task: AzureCLI@2
             displayName: Purge CDN cache
