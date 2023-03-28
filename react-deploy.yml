@@ -76,6 +76,14 @@ stages:
             condition: and( succeeded(), eq(${{ parameters.provision }}, true) )
 
           - task: AzureCLI@2
+            displayName: Delete current website files
+            inputs:
+              azureSubscription: ${{ parameters.azureConnection }}
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: az storage blob delete-batch --source '$web' --auth-mode login
+
+          - task: AzureCLI@2
             displayName: Copy website files to storage
             inputs:
               azureSubscription: ${{ parameters.azureConnection }}
